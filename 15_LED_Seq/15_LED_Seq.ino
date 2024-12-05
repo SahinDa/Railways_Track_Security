@@ -1,53 +1,53 @@
-int latchPin = 5;  // Latch pin of 74HC595
-int clockPin = 6;  // Clock pin of 74HC595
-int dataPin = 4;   // Data pin of 74HC595
-
-/*int matrix[6][3] = {
-  {1, 2, 3},  // Group 1 (First Light Post)
-  {4, 5, 6},  // Group 2 (Second Light Post)
-  {7, 8, 9},  // Group 3 (Third Light Post)
-  {10, 11, 12}, // Group 4 (Fourth Light Post)
-  {13, 14, 15}, // Group 5 (Fifth Light Post)
-  {16, 16, 16}  // Group 6 (Sixth Light Post, LED 16 only)
-}; */
-
-// Define the matrix of LEDs (3x5) representing light posts
-// Each row represents a color (Green, Yellow, Red)
-// Each column represents a light post
-int matrix[4][5] = {
-   {1, 4, 8, 12, 15},  
-   {3, 4, 7, 11, 15}, 
-   {3, 6, 7, 10, 14},
-   {2,6,9,10,13} 
-};
+// Define Arduino pins connected to the shift registers
+int load = 7;          // PL pin 1 (parallel load)
+int clockEnablePin = 4; // CE pin 15 (clock enable)
+int dataIn = 5;         // Q7 pin 7(serial data out from second register)
+int clockIn = 6;        // CP pin 2(clock pulse)
 
 void setup() {
-  pinMode(latchPin, OUTPUT);
-  pinMode(dataPin, OUTPUT);
-  pinMode(clockPin, OUTPUT);
+  // Initialize Serial Monitor
+  Serial.begin(9600);
+  
+  // Setup 74HC165 connections
+  pinMode(load, OUTPUT);             // Parallel load pin
+  pinMode(clockEnablePin, OUTPUT);   // Clock enable pin
+  pinMode(clockIn, OUTPUT);          // Clock pulse pin
+  pinMode(dataIn, INPUT);            // Serial data input pin
+  
+  // Set default states
+  digitalWrite(clockIn, HIGH);       // Initialize clock to HIGH
+  digitalWrite(clockEnablePin, HIGH); // Disable shift register (CE HIGH)
 }
 
 void loop() {
-  // Loop through each color (Green, Yellow, Red)
-  for (int i = 0; i < 3; i++) {
-    uint16_t ledPattern = 0;  // Initialize LED pattern to 0
+  // Load data from sensors into the shift registers
+  digitalWrite(load, LOW);           // Pull PL LOW to load parallel data
+  delayMicroseconds(5);              // Short delay
+  digitalWrite(load, HIGH);          // Set PL HIGH for normal operation
+  delayMicroseconds(5);              // Short delay
 
-    // Set the bits corresponding to the current group (color) in the matrix
-    for (int j = 0; j < 5; j++) {
-      ledPattern |= (1 << (matrix[i][j] - 1));  // Turn on LEDs for this color group
-    }
+  // Enable reading from the shift registers
+  digitalWrite(clockEnablePin, LOW); // Enable shift register output
 
-    // Send the pattern to the shift registers
-    digitalWrite(latchPin, LOW);  // Prepare to send data
-
-    // Send the high byte (first 8 bits)
-    shiftOut(dataPin, clockPin, MSBFIRST, highByte(ledPattern));
-
-    // Send the low byte (next 8 bits)
-    shiftOut(dataPin, clockPin, MSBFIRST, lowByte(ledPattern));
-
-    digitalWrite(latchPin, HIGH);  // Latch the data to the LEDs
-
-    delay(5000);  // Wait for 5 seconds before moving to the next color group
+  // Read 16 bits of data (covers both registers, though only 12 sensors are connected)
+  unsigned int sensorData = 0;       // Variable to store combined data
+  for (int i = 0; i < 16; i++) {
+    sensorData |= (digitalRead(dataIn) << (15 - i)); // Read each bit
+    digitalWrite(clockIn, LOW);      // Toggle clock LOW
+    delayMicroseconds(5);            // Short delay
+    digitalWrite(clockIn, HIGH);     // Toggle clock HIGH
   }
+
+  // Disable reading from the shift registers
+  digitalWrite(clockEnablePin, HIGH); // Disable shift register output
+
+  // Print the sensor states
+  Serial.print("Sensor States: ");
+  for (int i = 10; i >= 0; i--) {    // Only print the first 12 bits (12 sensors)
+    Serial.print((sensorData >> i) & 1); // Extract and print each bit
+  }
+  Serial.println();
+
+  // Short delay before next read
+  delay(200);
 }
