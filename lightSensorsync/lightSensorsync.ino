@@ -1,8 +1,10 @@
+#include <SoftwareSerial.h>
 // === Pin Configuration for 74HC165 (Sensor Input) ===
 const int load = 7;             // PL (Parallel Load)
 const int clockEnablePin = 4;   // CE (Clock Enable)
 const int dataIn = 5;           // Q7 (Serial Output)
 const int clockIn = 6;          // CP (Clock)
+SoftwareSerial mySerial(3,2);
 
 // === Pin Configuration for 74HC595 (LED Output) ===
 const int dataPin = 8;    // DS
@@ -69,7 +71,7 @@ byte readSensors() {
 // === Setup ===
 void setup() {
   Serial.begin(9600);
-
+  mySerial.begin(9600);
   // Sensor shift register pins
   pinMode(load, OUTPUT);
   pinMode(clockEnablePin, OUTPUT);
@@ -136,11 +138,13 @@ void loop() {
       setLED(matrix[0][2], false);
       green=0;
       yellow=1;
+      mySerial.println("s0\n");
       setLED(matrix[1][1], true);
       setLED(matrix[1][2], false);
     } else if (dataSensor[1] == 1 && dataSensor[2] == 0) {
       setLED(matrix[1][0], true);
       setLED(matrix[1][2], false);
+      mySerial.println("s1\n");
       green=1;
       yellow=2;
       setLED(matrix[2][1], true);
@@ -153,6 +157,7 @@ void loop() {
           setLED(matrix[2][2], false);
           green=2;
           yellow=3;
+          mySerial.println("count20\n");
           setLED(matrix[3][1], true);
           setLED(matrix[3][2], false);
         }
@@ -162,6 +167,7 @@ void loop() {
           setLED(matrix[4][2], false);
            green=4;
            yellow=5;
+           mySerial.println("count21\n");
           setLED(matrix[5][1], true);
           setLED(matrix[5][2], false);
         }
@@ -180,6 +186,7 @@ void loop() {
           setLED(matrix[5][2], false);
          green=5;
          yellow=6;
+         mySerial.println("count40\n");
           setLED(matrix[6][1], true);
           setLED(matrix[6][2], false);
           countSens4++;
@@ -190,6 +197,8 @@ void loop() {
           setLED(matrix[7][2], false);
           green=7;
           yellow=8;
+          mySerial.println("s6\n");
+          mySerial.println("count41\n");
           setLED(matrix[8][1], true);
           setLED(matrix[8][2], false);
         }
@@ -199,6 +208,7 @@ void loop() {
       setLED(matrix[6][2], false);
       green=6;
       yellow=1;
+      mySerial.println("s5\n");
       setLED(matrix[1][1], true);
       setLED(matrix[1][2], false);
     }
