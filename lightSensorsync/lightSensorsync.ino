@@ -1,15 +1,16 @@
 #include <SoftwareSerial.h>
-// === Pin Configuration for 74HC165 (Sensor Input) ===
-const int load = 7;             // PL (Parallel Load)
+
+
+const int load = 7;             // PL (Parallel Load)Add commentMore actions
 const int clockEnablePin = 4;   // CE (Clock Enable)
 const int dataIn = 5;           // Q7 (Serial Output)
 const int clockIn = 6;          // CP (Clock)
-SoftwareSerial mySerial(3,2);
 
 // === Pin Configuration for 74HC595 (LED Output) ===
 const int dataPin = 8;    // DS
 const int latchPin = 9;   // ST_CP
 const int clockPin = 10;  // SH_CP
+SoftwareSerial mySerial(3,2);
 
 const int numShiftRegisters = 5; // 5 shift registers = 40 outputs
 byte ledState[numShiftRegisters] = {0}; // Stores LED states for 5 registers
@@ -29,8 +30,15 @@ int matrix[9][3] = {
 };
 
 int dataSensor[7];
+int countSens1=0;
 int countSens2=0;
 int countSens4=0;
+
+  bool anySensorActive = false;
+  int temp =7;
+     int green=-1,yellow=-1;
+
+   
 // === Function to Set a Specific LED ON/OFF ===
 void setLED(int ledIndex, bool state) {
   ledIndex -= 1; // Convert 1-based to 0-based
@@ -98,24 +106,28 @@ void loop() {
   byte sensors = readSensors();
 
   for (int i = 0; i <= 6; i++) {
-    dataSensor[i] = bitRead(sensors, 6 - i);
+    dataSensor[i] = 1-bitRead(sensors, 6 - i);
+    Serial.print(dataSensor[i]);
   }
+  Serial.println();
 
-  bool anySensorActive = false;
-   int temp =7;
-   int green=-1,yellow=-1;
+
   // Check if any sensor is HIGH
   for (int i = 0; i <= 6; i++) {
     if (dataSensor[i] == 1 && temp!= i) {
       anySensorActive = true;
       temp=i;
+      if(i==1){
+        countSens1++;
+        countSens1=countSens1%3;
+      }
       if(i==2){
         countSens2++;
         countSens2=countSens2%4;
       }
       if(i==4){
          countSens4++;
-         countSens4=countSens4%2;
+         countSens4=countSens4%3;
       }
       break;
     }
@@ -124,6 +136,7 @@ void loop() {
   if (anySensorActive) {
     // No sensors active → reset to RED
   // Initialize all light posts to RED
+   anySensorActive=false;
   for (int i = 0; i < 9; i++) {
     setLED(matrix[i][0], false);  // Green OFF
     setLED(matrix[i][1], false);  // Yellow OFF
@@ -138,26 +151,41 @@ void loop() {
       setLED(matrix[0][2], false);
       green=0;
       yellow=1;
-      mySerial.println("s0\n");
+      // mySerial.println("s0\n");
       setLED(matrix[1][1], true);
       setLED(matrix[1][2], false);
-    } else if (dataSensor[1] == 1 && dataSensor[2] == 0) {
+    }
+    else if(dataSensor[0] == 1 && dataSensor[1] == 1){
+
+    }
+     else if (dataSensor[1] == 1 && dataSensor[2] == 0) {
+      
       setLED(matrix[1][0], true);
       setLED(matrix[1][2], false);
-      mySerial.println("s1\n");
+      // mySerial.println("s1\n");
       green=1;
+      if(countSens1==1){ 
       yellow=2;
       setLED(matrix[2][1], true);
       setLED(matrix[2][2], false);
-    } else if (dataSensor[2] == 1) {
-  //    countSens2++;
+      }
+      else{
+      yellow=4;
+      setLED(matrix[4][1], true);
+      setLED(matrix[4][2], false);
+      }
+    }
+    else if(dataSensor[1] == 1 && dataSensor[2] == 1){
+
+    }
+    else if (dataSensor[2] == 1) {
       if (countSens2 <=1 ) {
         if (dataSensor[3] == 0) {
           setLED(matrix[2][0], true);
           setLED(matrix[2][2], false);
           green=2;
           yellow=3;
-          mySerial.println("count20\n");
+          // mySerial.println("count20\n");
           setLED(matrix[3][1], true);
           setLED(matrix[3][2], false);
         }
@@ -166,53 +194,83 @@ void loop() {
           setLED(matrix[4][0], true);
           setLED(matrix[4][2], false);
            green=4;
-           yellow=5;
-           mySerial.println("count21\n");
+           mySerial.println("count20\n");
+           if(countSens2==2){
+            yellow=6;
           setLED(matrix[5][1], true);
           setLED(matrix[5][2], false);
+          }else{
+            yellow=7;
+             setLED(matrix[7][1], true);
+            setLED(matrix[7][2], false);
+          }
+
         }
       }
-    } else if (dataSensor[3] == 1 && dataSensor[1] == 0) {
+    }else if(dataSensor[2] == 1 && dataSensor[3]==1 || dataSensor[2] == 1 && dataSensor[4]==1){
+
+    }
+     else if (dataSensor[3] == 1 && dataSensor[1] == 0) {
       setLED(matrix[3][0], true);
       setLED(matrix[3][2], false);
      green=3;
       yellow=0;
       setLED(matrix[0][1], true);
       setLED(matrix[0][2], false);
-    } else if (dataSensor[4] == 1) {
-      if (countSens4 == 1) {
+    }
+    else if(dataSensor[3] == 1 && dataSensor[1] == 1){
+
+    }
+    else if (dataSensor[4] == 1) {
+      if (countSens4 <= 1) {
         if (dataSensor[5] == 0) {
           setLED(matrix[5][0], true);
           setLED(matrix[5][2], false);
          green=5;
          yellow=6;
-         mySerial.println("count40\n");
+        mySerial.println("count40\n");
           setLED(matrix[6][1], true);
           setLED(matrix[6][2], false);
-          countSens4++;
+          // countSens4++;
         }
-      } else {
+      }else {
         if (dataSensor[6] == 0) {
           setLED(matrix[7][0], true);
           setLED(matrix[7][2], false);
           green=7;
           yellow=8;
-          mySerial.println("s6\n");
+          // mySerial.println("s6\n");
           mySerial.println("count41\n");
           setLED(matrix[8][1], true);
           setLED(matrix[8][2], false);
         }
       }
-    } else if (dataSensor[5] == 1 && dataSensor[1] == 0) {
+    }
+    else if(dataSensor[4] == 1 && dataSensor[5]==1 || dataSensor[4] == 1 && dataSensor[6]==1){
+
+    }
+    else if (dataSensor[5] == 1 && dataSensor[1] == 0) {
       setLED(matrix[6][0], true);
       setLED(matrix[6][2], false);
       green=6;
       yellow=1;
-      mySerial.println("s5\n");
+       mySerial.println("s5\n");
       setLED(matrix[1][1], true);
       setLED(matrix[1][2], false);
     }
+    else if(dataSensor[5] == 1 && dataSensor[1] == 1){
+      
+    }
+    else if(dataSensor[6]==1 && dataSensor[2]==0){
+      setLED(matrix[8][0],true);
+      setLED(matrix[8][2],false);
+      green=8;
+      yellow=2;
+      mySerial.println("s6\n");
+      setLED(matrix[2][1],true);
+      setLED(matrix[2][2],false);
+    }
   }
   updateLEDs();
-  delay(1000);
+  delay(500);
 }
